@@ -1,4 +1,4 @@
-.PHONY: fmt lint test doc check
+.PHONY: fmt fmt-check lint test doc check
 
 fmt:
 	cargo fmt --all
@@ -12,4 +12,7 @@ test:
 doc:
 	cargo doc --no-deps --open
 
-check: fmt lint test
+fmt-check:
+	cargo fmt --all -- --check
+
+check: fmt-check lint test
