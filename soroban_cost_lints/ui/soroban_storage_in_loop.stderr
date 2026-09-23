@@ -50,6 +50,15 @@ LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should 
    |
    = help: if the read is loop-invariant, hoist it out of the loop; otherwise batch where possible
 
+warning: storage read result is discarded
+  --> $DIR/soroban_storage_in_loop.rs:58:30
+   |
+LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should Warn
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+   = note: `#[warn(discarded_storage_read)]` on by default
+
 warning: loop-invariant storage operation inside a loop
   --> $DIR/soroban_storage_in_loop.rs:58:30
    |
@@ -114,6 +123,14 @@ LL |             env.storage().instance().has(&i); // Should Warn
    |
    = help: hoist this storage operation out of the loop
 
+warning: storage read result is discarded
+  --> $DIR/soroban_storage_in_loop.rs:74:13
+   |
+LL |             env.storage().instance().has(&i); // Should Warn
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
 warning: loop-invariant storage operation inside a loop
   --> $DIR/soroban_storage_in_loop.rs:74:13
    |
@@ -153,6 +170,22 @@ LL |     let _ = env.storage().persistent().get::<i32, i32>(&1); // Good
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: after reading from persistent storage, call extend_ttl on the same key to avoid paying archival cost on subsequent access
+
+warning: storage read result is discarded
+  --> $DIR/soroban_storage_in_loop.rs:84:13
+   |
+LL |     let _ = env.storage().temporary().has(&1); // Good
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
+warning: storage read result is discarded
+  --> $DIR/soroban_storage_in_loop.rs:85:13
+   |
+LL |     let _ = env.storage().persistent().get::<i32, i32>(&1); // Good
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
 
 warning: storage write without a corresponding read
   --> $DIR/soroban_storage_in_loop.rs:91:34
@@ -234,5 +267,5 @@ LL |         env.storage().instance().set(&i, &1); // Good (allowed)
    |
    = help: hoist this storage operation out of the loop
 
-error: aborting due to 7 previous errors; 22 warnings emitted
+error: aborting due to 7 previous errors; 26 warnings emitted
 

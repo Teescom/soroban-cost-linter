@@ -24,15 +24,8 @@ jobs:
           toolchain: nightly-2026-04-16
           components: rustc-dev, llvm-tools-preview
       - name: Install Dylint
-        run: cargo install cargo-dylint dylint-link --version "^6.0.1"
+        run: cargo install cargo-dylint dylint-link --version "^6.0.1" --locked
       - name: Install soroban-cost-linter
-        run: cargo install --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
+        run: cargo install --locked --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
       - name: Run Cost Linter
-        run: cargo cost-lint
-        
-      # Example: Run in JSON mode and create inline PR annotations
-      # - name: Run Cost Linter (JSON)
-      #   run: |
-      #     cargo cost-lint --format json | jq -r '
-      #       . | "::\(.level) file=\(.file),line=\(.span.line_start),col=\(.span.column_start)::\(.message) (Lint: \(.name))"
-      #     '
+        run: cargo cost-lint --format github

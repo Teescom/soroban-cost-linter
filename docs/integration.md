@@ -1,10 +1,112 @@
 # Integration Guide
 
-`soroban-cost-linter` integrates directly into your workspace and CI/CD pipelines.## Local Configuration (`budget.toml`)
+`soroban-cost-linter` integrates directly into your workspace and CI/CD pipelines.
+
+## Colour Control
+
+`soroban-cost-linter` forwards rustc's own coloured diagnostics to the terminal.
+You can control this behaviour with the `--color` flag or the `NO_COLOR`
+environment variable.
+
+| Scenario | Result |
+|---|---|
+| `cargo cost-lint` (no flags) | Colours when stdout is a terminal, none otherwise |
+| `cargo cost-lint --color always` | Colours always, even when piped |
+| `cargo cost-lint --color never` | No colours ever |
+| `NO_COLOR=1 cargo cost-lint` | No colours (same as `--color never`) |
+| `NO_COLOR=1 cargo cost-lint --color always` | Colours (`--color` takes precedence) |
+
+The [NO_COLOR](https://no-color.org/) convention is respected: any non-empty
+value forces uncoloured output unless `--color` is passed explicitly.
+
+## GitHub Actions
+
+The easiest way to add Soroban cost linting to your CI is the official composite
+action, `Tollcraft/soroban-cost-linter`. It installs the pinned Rust toolchain
+and Dylint, builds the lint library and the `cargo cost-lint` CLI, and runs the
+linter against your contract, emitting GitHub workflow annotations for every
+finding. You do **not** need to hand-roll the toolchain install.
+
+Copy this to `.github/workflows/cost-lint.yml` in your contract workspace:
+
+```yaml
+name: Soroban Cost Lint
+
+on: [push, pull_request]
+
+jobs:
+  cost-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run soroban-cost-linter
+        uses: Tollcraft/soroban-cost-linter@v1
+        with:
+          config: budget.toml
+```
+
+The workflow checks out your repository, then invokes the action. The `with:`
+block wires the `config` input to your `budget.toml` (the same file described
+in [Local Configuration](#local-configuration-budgettoml)). If you have more
+than one contract workspace in a monorepo, point the action at the right one
+with `working-directory: <path>`, and pass any extra CLI flags through `args:`.
+
+The `toolchain` input defaults to the nightly that matches the release
+(`nightly-2026-04-16`). Leave it unset unless you specifically need a different
+nightly — a mismatched toolchain is what makes the lint library fail to link.
+
+### Input reference
+
+The action accepts four inputs:
+
+| Input | Description | Default |
+|---|---|---|
+| `config` | Path to `budget.toml`, relative to `working-directory` | *(none — every lint runs at its default level)* |
+| `toolchain` | Rust nightly toolchain version | `nightly-2026-04-16` |
+| `args` | Additional arguments to pass to `cargo cost-lint` | *(none)* |
+| `working-directory` | Directory containing the contract workspace to lint | `.` |
+
+For example, to lint a subdirectory with an extra `--format` override:
+
+```yaml
+- name: Run soroban-cost-linter
+  uses: Tollcraft/soroban-cost-linter@v1
+  with:
+    working-directory: contracts/my-account
+    config: ../shared/budget.toml
+    args: --format text
+```
+
+### What a failing run looks like
+
+Most shipped lints default to `warn`, but `soroban_storage_in_loop` defaults to
+`deny`. Because `cargo cost-lint` exits `1` whenever any finding is
+`deny`/`error` level, a storage operation inside a loop fails the job by
+default — no config needed. To also fail on the other lints, raise them to
+`deny` in your `budget.toml` (wired in via the `config` input):
+
+```toml
+[lints]
+redundant_env_clone = "deny"
+```
+
+A run that produces only `warn` findings annotates the diff but still exits `0`
+and reports green. Every finding is printed as a GitHub annotation of the form
+`::error file=src/lib.rs,line=12,col=5::storage operation inside a loop`
+(shown inline in the pull-request diff). A failing run therefore shows a
+`deny`-level annotation in the diff **and** fails the job with exit code `1` —
+that is how you tell a real finding from a broken setup, which would fail while
+building the toolchain or the lint library instead.
+
+{% hint style="warning" %}
+The action's CI is exercised on `ubuntu-latest` only. If you target Windows,
+test it in your own CI before relying on it — the steps install `cargo-dylint`
+from source, which is the step most likely to differ from Linux.
+{% endhint %}
 
 ## Local Configuration (`budget.toml`)
 
-Create a `budget.toml` file to adjust lint severities, then point `cargo cost-lint` at it with `--config`. Today the only way to apply a config is to pass `--config <PATH>` explicitly — the tool does **not** automatically walk up to a workspace-root `budget.toml`. When `--config` is omitted, every lint runs at its declared default level (currently `warn` for all shipped lints).
+Create a `budget.toml` file to adjust lint severities, then point `cargo cost-lint` at it with `--config`. Today the only way to apply a config is to pass `--config <PATH>` explicitly — the tool does **not** automatically walk up to a workspace-root `budget.toml`. When `--config` is omitted, every lint runs at its declared default level (`warn` for most lints, `deny` for `soroban_storage_in_loop`).
 
 The `--config` flag accepts a single path (relative or absolute). A relative path is resolved against the directory you run `cargo cost-lint` from; an absolute path is used verbatim.
 
@@ -87,6 +189,7 @@ Each key under `[lints]` must match a lint name **exactly** as shown in the comp
 | `unnecessary_host_function_call`    | `warn`        |
 | `symbol_new_for_short_literal`      | `warn`        |
 | `bytes_append_in_loop`              | `warn`        |
+| `string_concat_in_loop`            | `warn`        |
 | `storage_write_without_read`        | `warn`        |
 | `inefficient_bytes_concat`          | `warn`        |
 | `map_insert_in_loop`                | `warn`        |
@@ -115,161 +218,20 @@ Rustc resolves the effective lint level in this order (highest priority first):
 3. Compiler flags from `DYLINT_RUSTFLAGS` (the mechanism used by budget.toml)
 4. The lint's built-in default
 
-A `deny` in `budget.toml` raises the level from `warn` (the default) to `deny`. An `#[allow]` attribute on a function body suppresses a `warn`-level lint for that function just as it normally would — but a `deny` in `budget.toml` will cause that same function to fail, because `#[allow]` cannot override `-D`. Conversely, `allow` in budget.toml suppresses the lint everywhere, even overriding `#[deny]` in source code.
+`cargo-cost-lint` supports generating shell completion scripts. Use the `--completions` flag to generate a script for your shell.
 
-## Verbosity Control
-
-The wrapper has two flags for controlling how much non-finding output it prints.
-
-| Flag | Behaviour |
-|------|----------|
-| `--quiet` | Suppresses informational messages and warnings (config loaded, budget.toml missing, parse failures). Lint findings and hard errors are never suppressed. |
-| `--verbose` | Prints diagnostic detail to stderr: the resolved `budget.toml` path, the `DYLINT_RUSTFLAGS` values, and the full `cargo dylint` command line. |
-
-The two flags are mutually exclusive — clap rejects `--quiet --verbose` on the same command line. Neither flag changes the exit code or the lint findings.
-
-In JSON mode (`--format json`), both flags keep stdout as clean NDJSON. All diagnostic output goes to stderr.
-
-**Examples:**
-
+### Bash
 ```bash
-# Silent run — only lint findings appear
-cargo cost-lint --quiet
-
-# Diagnostic run — see exactly what the tool is doing
-cargo cost-lint --verbose
-
-# JSON + verbose — clean JSON on stdout, diagnostics on stderr
-cargo cost-lint --format json --verbose > results.json
+cargo cost-lint --completions bash > ~/.local/share/bash-completion/completions/cargo-cost-lint
 ```
 
-## Editor / IDE Integration
-
-`soroban-cost-linter` can surface lint warnings directly in your editor through **rust-analyzer**'s check override mechanism. This works in any editor that supports rust-analyzer (VS Code, Zed, Helix, Neovim, etc.).
-
-{% hint style="info" %}
-**Prerequisites:** You must have `cargo-dylint`, `dylint-link`, and `cargo-cost-lint` [installed](../README.md#installation) before configuring IDE integration.
-{% endhint %}
-
-### How it works
-
-rust-analyzer runs `cargo check` by default to provide real-time diagnostics. By overriding the check command to use `cargo dylint` with the `soroban_cost_lints` library, the linter's output is parsed and displayed as standard warnings and errors right in your editor's problem panel. This mirrors the same `cargo dylint` invocation that `cargo cost-lint` uses internally.
-
-### VS Code setup
-
-Add the following to your workspace's `.vscode/settings.json`:
-
-```json
-{
-    "rust-analyzer.check.overrideCommand": [
-        "cargo",
-        "dylint",
-        "--lib",
-        "soroban_cost_lints",
-        "--",
-        "--all-targets",
-        "--message-format=json"
-    ]
-}
+### Zsh
+```zsh
+cargo cost-lint --completions zsh > _cargo-cost-lint
+# Ensure it's in your fpath
 ```
 
-Once saved, rust-analyzer will restart its check process. Lint findings will appear in the **Problems** panel (Ctrl+Shift+M) with the same formatting shown in the [Usage](../README.md#usage) section.
-
-{% hint style="warning" %}
-Dylint-based IDE integration relies on `rust-analyzer.check.overrideCommand`, which replaces the default `cargo check` entirely. This is a stable rust-analyzer feature and is the approach [recommended by Dylint](https://github.com/trailofbits/dylint), but it is not tested against every editor and Rust toolchain combination. If you encounter issues, please [file a bug report](https://github.com/Tollcraft/soroban-cost-linter/issues/new?template=bug_report.yml).
-{% endhint %}
-
-### Other editors
-
-Any editor that uses rust-analyzer can apply the same override. Consult your editor's rust-analyzer configuration documentation for equivalent settings:
-
-- **Zed:** `"lsp": { "rust-analyzer": { "check": { "overrideCommand": [...] } } }` in your project settings
-- **Helix:** `[language-server.rust-analyzer.config.check]` in `languages.toml`
-- **Neovim (lspconfig):** `settings = { ["rust-analyzer"] = { check = { overrideCommand = {...} } } }`
-
-### Performance considerations
-
-{% hint style="warning" %}
-Running `cargo dylint` on every save is **slower** than the default `cargo check`, because it loads and executes dynamic lint libraries in addition to the compiler's normal analysis pass. For most Soroban projects the overhead is modest, but it scales with project size.
-{% endhint %}
-
-If the performance overhead is too high for daily development, consider these alternatives:
-
-- **On-demand only:** Remove the override from your workspace settings and run `cargo cost-lint` manually in a terminal when you want lint feedback.
-- **CI-only:** Keep the linter in your [GitHub Actions](#github-actions) pipeline and rely on PR checks for enforcement.
-
-## GitHub Actions
-
-We provide a template to easily integrate the linter into your GitHub Actions pipeline. The template runs on both Linux and Windows:
-
-{% code title=".github/workflows/cost-lint.yml" %}
-```yaml
-name: Soroban Cost Lint
-
-on: [push, pull_request]
-
-jobs:
-  cost-lint:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          toolchain: nightly-2026-04-16
+### Fish
+```fish
+cargo cost-lint --completions fish > ~/.config/fish/completions/cargo-cost-lint.fish
 ```
-
-{% hint style="info" %}
-The action defaults to the toolchain that matches the release. Override it only if you need a specific nightly for compatibility with your workspace.
-{% endhint %}
-
-### Full input reference
-
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `config` | No | `''` | Path to `budget.toml` (relative to `working-directory`) |
-| `toolchain` | No | `nightly-2026-04-16` | Rust nightly toolchain version |
-| `args` | No | `''` | Extra arguments forwarded to `cargo cost-lint` |
-| `working-directory` | No | `'.'` | Directory containing the Soroban workspace |
-
-## JSON Output and CI Annotations
-
-For machine-readable output, pass `--format json`. `cargo cost-lint` will emit JSON lines (NDJSON) detailing each lint finding. The exit code remains non-zero if a `deny` level lint fires.
-
-### JSON Schema
-Each line of stdout is a JSON object with the following schema:
-```json
-{
-  "name": "soroban_storage_in_loop",
-  "level": "warning",
-  "file": "src/lib.rs",
-  "span": {
-    "line_start": 42,
-    "line_end": 42,
-    "column_start": 13,
-    "column_end": 18
-  },
-  "message": "storage operations in loops are expensive",
-  "help": "consider lifting the storage operation outside the loop"
-}
-```
-
-### GitHub Actions Annotations Example
-You can pipe the JSON output into a tool like `jq` to create GitHub annotations (which show up directly on your PR's Files Changed tab).
-
-```yaml
-      - uses: Tollcraft/soroban-cost-linter@v1
-        with:
-          args: '--format json'
-      - name: Create GitHub annotations
-        if: always()
-        run: |
-          # If you captured the JSON output to a file, parse it:
-          # cargo cost-lint --format json > lint-results.json
-          # jq -r '. | "::\(.level) file=\(.file),line=\(.span.line_start),col=\(.span.column_start)::\(.message) (Lint: \(.name))"' lint-results.json
-```
-*(Note: If the linter returns a non-zero exit code due to a `deny` lint, the step will still fail correctly in Actions).*

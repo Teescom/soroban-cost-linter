@@ -7,6 +7,15 @@ LL |         let _seq = env.ledger().sequence(); // Should Warn
    = help: cache the result outside the loop when the call is loop-invariant
    = note: `#[warn(unnecessary_host_function_call)]` on by default
 
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:28:20
+   |
+LL |         let _seq = env.ledger().sequence(); // Should Warn
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
+   = note: `#[warn(ledger_context_read_in_loop)]` on by default
+
 warning: unnecessary host function call inside loop
   --> $DIR/unnecessary_host_function_call.rs:35:20
    |
@@ -14,6 +23,14 @@ LL |         let _seq = env.ledger().sequence(); // Should Warn
    |                    ^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: cache the result outside the loop when the call is loop-invariant
+
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:35:20
+   |
+LL |         let _seq = env.ledger().sequence(); // Should Warn
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
 
 warning: unnecessary host function call inside loop
   --> $DIR/unnecessary_host_function_call.rs:42:20
@@ -23,6 +40,14 @@ LL |         let _seq = env.ledger().sequence(); // Should Warn
    |
    = help: cache the result outside the loop when the call is loop-invariant
 
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:42:20
+   |
+LL |         let _seq = env.ledger().sequence(); // Should Warn
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
+
 warning: unnecessary host function call inside loop
   --> $DIR/unnecessary_host_function_call.rs:50:24
    |
@@ -30,6 +55,14 @@ LL |             let _seq = env.ledger().sequence(); // Should Warn
    |                        ^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: cache the result outside the loop when the call is loop-invariant
+
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:50:24
+   |
+LL |             let _seq = env.ledger().sequence(); // Should Warn
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
 
 warning: unnecessary host function call inside loop
   --> $DIR/unnecessary_host_function_call.rs:64:21
@@ -39,6 +72,14 @@ LL |         let _seq1 = env.ledger().sequence(); // Should Warn
    |
    = help: cache the result outside the loop when the call is loop-invariant
 
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:64:21
+   |
+LL |         let _seq1 = env.ledger().sequence(); // Should Warn
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
+
 warning: unnecessary host function call inside loop
   --> $DIR/unnecessary_host_function_call.rs:65:21
    |
@@ -47,5 +88,21 @@ LL |         let _seq2 = env.ledger().sequence(); // Should Warn
    |
    = help: cache the result outside the loop when the call is loop-invariant
 
-warning: 6 warnings emitted
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:65:21
+   |
+LL |         let _seq2 = env.ledger().sequence(); // Should Warn
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
+
+warning: reading ledger context `sequence` inside a loop — the value cannot change during this invocation
+  --> $DIR/unnecessary_host_function_call.rs:72:20
+   |
+LL |         let _seq = env.ledger().sequence(); // Good (allowed)
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: ledger context values (sequence) are invariant during a single invocation; hoist this read outside the loop to avoid repeated host calls
+
+warning: 13 warnings emitted
 

@@ -3,6 +3,11 @@
 # Reads the nightly toolchain pin from `rust-toolchain` (the single source of
 # truth) so there is no hardcoded copy of the nightly version in this file.
 #
+# The base image is `ubuntu:22.04` pinned by its multi-arch manifest digest so
+# the image is reproducible regardless of what the `22.04` tag points at when
+# it is built. The container does not run as root: a `dev` user with uid/gid
+# 1000 and passwordless sudo is created below.
+#
 # Image size notes:
 #   rustc-dev is the largest component (~500 MB uncompressed).  We use
 #   `--profile minimal` at rustup install time (no docs), strip the cargo
@@ -10,7 +15,7 @@
 #   unnecessary apt packages with `--no-install-recommends`.
 # ────────────────────────────────────────────────────────────────────────────
 
-FROM ubuntu:22.04
+FROM ubuntu:22.04@sha256:b8b6ee6aa931ecd9d0d952abc34dc0e5f7c6a30c6bb71b079fe399fde0329c02
 
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -45,7 +50,7 @@ RUN NIGHTLY=$(sed -n 's/^channel = "\(nightly-[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)
         sh -s -- -y --default-toolchain "${NIGHTLY}" --profile minimal && \
     . "$HOME/.cargo/env" && \
     rustup component add rustc-dev llvm-tools-preview rustfmt clippy && \
-    cargo install cargo-dylint dylint-link --version "^6.0.1" && \
+    cargo install cargo-dylint dylint-link --version "^6.0.1" --locked && \
     # ── reduce image size ────────────────────────────────────────────────
     rm -rf ${HOME}/.cargo/registry/cache \
            ${HOME}/.cargo/registry/src \

@@ -7,16 +7,16 @@ use std::io;
 /// error handling is consistent and caller-friendly instead of mixing `unwrap`,
 /// `expect`, `exit`, and ad‑hoc `eprintln!` calls.
 #[derive(Debug)]
-// `Subprocess` and `MissingPrerequisite` are part of the consolidated error
-// surface (#299/#281) but nothing raises them yet.
-// Kept: part of a consolidated error surface but currently unraised
-#[allow(dead_code)]
 pub enum LinterError {
     /// An I/O error — file read/write, pipe capture, etc.
     Io(io::Error),
     /// JSON (de)serialisation failed.
     Json(serde_json::Error),
     /// A child process (`cargo dylint`) exited with a non-zero status.
+    // main() reports subprocess exits by calling `exit` with the child's code
+    // directly, so nothing constructs this today; kept as part of the public
+    // error taxonomy.
+    #[allow(dead_code)]
     Subprocess { code: Option<i32> },
     /// A required prerequisite is missing (e.g. `cargo-dylint` not installed).
     MissingPrerequisite(String),

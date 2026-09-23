@@ -1,0 +1,60 @@
+warning: redundant storage read: this key was already read without modification
+  --> $DIR/soroban_redundant_storage_read.rs:59:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&1); // Should Warn
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: store the value from the first read and reuse it instead of reading again
+   = note: `#[warn(soroban_redundant_storage_read)]` on by default
+
+warning: storage read result is discarded
+  --> $DIR/soroban_redundant_storage_read.rs:58:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&1);
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+   = note: `#[warn(discarded_storage_read)]` on by default
+
+warning: storage read result is discarded
+  --> $DIR/soroban_redundant_storage_read.rs:59:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&1); // Should Warn
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
+warning: storage read result is discarded
+  --> $DIR/soroban_redundant_storage_read.rs:65:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&1);
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
+warning: storage read result is discarded
+  --> $DIR/soroban_redundant_storage_read.rs:67:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&1); // Should NOT warn
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
+warning: storage read result is discarded
+  --> $DIR/soroban_redundant_storage_read.rs:72:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&1); // Should NOT warn
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
+warning: storage read result is discarded
+  --> $DIR/soroban_redundant_storage_read.rs:73:26
+   |
+LL |     let _: Option<i32> = env.storage().instance().get(&2); // Should NOT warn
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: delete the storage read or use its returned value
+
+warning: 7 warnings emitted
+

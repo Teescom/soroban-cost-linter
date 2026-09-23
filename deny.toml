@@ -9,8 +9,9 @@
 # CI uses EmbarkStudios/cargo-deny-action@v2 in .github/workflows/security.yml
 
 [graph]
-# If a crate has an unlicensed dependency, the check will fail.
-all-features = false
+# Scan all workspace members with all features enabled to ensure local runs
+# match CI dependency auditing.
+all-features = true
 no-default-features = false
 
 # ------------------------------------ Advisories ------------------------------------
@@ -59,6 +60,10 @@ allow = [
     # strictly more permissive than the plain Apache-2.0 already allowed above.
     # This can be removed if the dependency on rustc_apfloat is dropped.
     "Apache-2.0 WITH LLVM-exception",
+    # BSD-3-Clause — permissive license pulled in by the crypto dependencies
+    # of soroban-sdk (curve25519-dalek, ed25519-dalek, subtle), which the
+    # corpus contract fixtures require as workspace members.
+    "BSD-3-Clause",
 ]
 # The precedence for determining which license applies when multiple are detected.
 confidence-threshold = 0.8
