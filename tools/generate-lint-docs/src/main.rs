@@ -191,8 +191,6 @@ fn generate_readme(entries: &[LintEntry]) -> String {
     md
 }
 
-
-
 fn generate_catalog(entries: &[LintEntry]) -> String {
     let mut md = String::new();
     md.push_str("# Lint Catalog\n\n");
@@ -239,7 +237,7 @@ fn main() {
 
     let lib_path = resolve_path("soroban_cost_lints/src/lib.rs");
     let readme_path = resolve_path("docs/lints/README.md");
-        let catalog_path = resolve_path("docs/lint_catalog.md");
+    let catalog_path = resolve_path("docs/lint_catalog.md");
 
     if !lib_path.exists() {
         eprintln!(
@@ -254,7 +252,7 @@ fn main() {
     let entries = parse_lib_rs(&content);
 
     let readme = generate_readme(&entries);
-        let catalog = generate_catalog(&entries);
+    let catalog = generate_catalog(&entries);
 
     if check_mode {
         // Normalise line endings before comparing. On Windows, git checks these
@@ -262,7 +260,7 @@ fn main() {
         // comparison reports every generated file as stale on that host.
         let normalise = |s: String| s.replace("\r\n", "\n");
         let current_readme = normalise(fs::read_to_string(&readme_path).unwrap_or_default());
-                let current_catalog = normalise(fs::read_to_string(&catalog_path).unwrap_or_default());
+        let current_catalog = normalise(fs::read_to_string(&catalog_path).unwrap_or_default());
 
         let mut exit_code = 0;
         if current_readme != readme {
@@ -676,7 +674,7 @@ multiline description"
         fs::create_dir_all(readme_path.parent().unwrap()).unwrap();
         fs::write(&readme_path, "STALE CONTENT").unwrap();
 
-                let entries = parse_lib_rs(SINGLE_LINT);
+        let entries = parse_lib_rs(SINGLE_LINT);
         let correct_catalog = generate_catalog(&entries);
         let catalog_path = root.join("docs/lint_catalog.md");
         fs::write(&catalog_path, &correct_catalog).unwrap();
